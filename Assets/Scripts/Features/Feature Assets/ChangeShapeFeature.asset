@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5d2fa46ca868c5e43ba010159cfb20aa, type: 3}
+  m_Name: ChangeShapeFeature
+  m_EditorClassIdentifier: 
+  type: 3
+  value: 0
+  featureName: Change Shape
+  activationMessage: "\u0634\u06A9\u0644 \u062A\u063A\u06CC\u06CC\u0631 \u06A9\u0631\u062F!"
+  holdWarningMessage: "\u0628\u0631\u0627\u06CC \u0641\u0639\u0627\u0644\u200C\u0633\u0627\u0632\u06CC
+    \u0628\u0627\u06CC\u062F \u062F\u06A9\u0645\u0647 \u0631\u0627 \u0646\u06AF\u0647
+    \u062F\u0627\u0631\u06CC\u062F!"
+  cost: 100
+  duration: 10
+  cooldown: 0
+  activationSound: {fileID: 8300000, guid: 56ed2cd4ce4f64548a62d77e4513193c, type: 3}
+  cooldownFinishSound: {fileID: 8300000, guid: 7a92db2dfd0f9774e836dad992b63c8b, type: 3}
+  holdStartSound: {fileID: 8300000, guid: eafcb3e072fcd8644bbf397f79e3f88b, type: 3}

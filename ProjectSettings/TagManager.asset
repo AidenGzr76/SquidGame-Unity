@@ -1,0 +1,69 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!78 &1
+TagManager:
+  serializedVersion: 3
+  tags:
+  - Wall
+  - Cookie
+  - LeftPlatform
+  - RightPlatform
+  - Breakable
+  - Unbreakable
+  - Enemy
+  - QueueCharacter
+  - FinishPlatform
+  layers:
+  - Default
+  - TransparentFX
+  - Ignore Raycast
+  - Ground
+  - Water
+  - UI
+  - ProtectedShape
+  - Cookie
+  - platformLayer
+  - Highlighted
+  - obstacleMask
+  - Character
+  - Cash
+  - DeadBody
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  m_SortingLayers:
+  - name: Default
+    uniqueID: 0
+    locked: 0
+  - name: DeadBody
+    uniqueID: 3771062105
+    locked: 0
+  - name: Character
+    uniqueID: 2953541939
+    locked: 0
+  - name: World
+    uniqueID: 3264470707
+    locked: 0
+  - name: UI
+    uniqueID: 581269027
+    locked: 0
+  - name: Highlighted
+    uniqueID: 2721563323
+    locked: 0
+  m_RenderingLayers:
+  - Default

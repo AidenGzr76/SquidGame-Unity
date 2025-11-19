@@ -1,0 +1,17 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!221 &22100000
+AnimatorOverrideController:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: Rope Pulling O9
+  m_Controller: {fileID: 9100000, guid: c8163eae85a13d64ea60fef2db6af0c0, type: 2}
+  m_Clips:
+  - m_OriginalClip: {fileID: 7400000, guid: 68691c6baef33ac43af58199e2bec208, type: 2}
+    m_OverrideClip: {fileID: 7400000, guid: 2cabb5e0aac90e34bb1c076567bc40d2, type: 2}
+  - m_OriginalClip: {fileID: 7400000, guid: 7793a45889c6e76478769ff595185d60, type: 2}
+    m_OverrideClip: {fileID: 7400000, guid: 0c6afac1288a47a4199c7371e3bba5d1, type: 2}
+  - m_OriginalClip: {fileID: 7400000, guid: 3fc6eefd14b903045868de9218ddd532, type: 2}
+    m_OverrideClip: {fileID: 7400000, guid: bafd9a85f4121bb4ea228832cfadf7c7, type: 2}
