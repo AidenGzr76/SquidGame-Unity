@@ -3,25 +3,22 @@ using UnityEngine.UI;
 using TMPro;
 using System.Collections.Generic;
 using RTLTMPro;
+// using System.Diagnostics;
 
 [System.Serializable]
 public class TutorialStep
 {
-    public string stepName; // <<-- متغیر جدید برای عنوان در Inspector
+    public string stepName; 
     
     [TextArea(3, 5)]
     public string description;
-    public bool isWorldObject = false;
-
+    
     [Tooltip("The target the arrow points to (can be UI or a world object)")]
     public Transform target;
 
-
-    // <<< --- این خط جدید اضافه شده است --- >>>
     [Tooltip("If checked, the system will find the 'Player' tagged object at runtime as the target.")]
-    public bool targetIsPlayer = false; // آیا هدف این مرحله، بازیکن اصلی است؟
+    public bool targetIsPlayer = false; 
     
-
     [Header("Custom Positions & Rotation")]
     public Vector2 textPosition;
     public Vector2 arrowPosition;
@@ -29,17 +26,17 @@ public class TutorialStep
     public Vector2 buttonsPosition;
 
     [Header("Display Objects")]
-    [Tooltip("Objects that are normally inactive and will be temporarily activated and highlighted during this step")]
     public GameObject[] objectsToActivateAndHighlight;
 }
 
 public class TutorialManager : MonoBehaviour
 {
+    [Header("Settings")]
+    // public bool isTestMode = true; // اگر تیک داشته باشد، همیشه توتوریال پخش می‌شود (برای تست)
+    public string TutorialSaveKey = "LevelTutorialCompleted";
+
     [Header("Main Tutorial UI Container")]
-    [Tooltip("The parent object that contains all visual tutorial elements and will be enabled/disabled")]
-
-    public GameObject joystickObject; // <<-- متغیر جدید برای جوی‌استیک
-
+    public GameObject joystickObject; 
     public GameObject tutorialUIContainer;
 
     [Header("Core Tutorial Components")]
@@ -54,7 +51,7 @@ public class TutorialManager : MonoBehaviour
     
     private int currentStep = 0;
     
-    // متغیرهای بازگردانی حالت اولیه
+    // لیست‌های بازگردانی حالت اولیه
     private List<RectTransform> currentUiTargets = new List<RectTransform>();
     private List<Transform> originalParents = new List<Transform>();
     private List<int> originalSiblingIndexes = new List<int>();
@@ -66,27 +63,49 @@ public class TutorialManager : MonoBehaviour
     private int originalLayer;
     
     private List<GameObject> currentlyActivatedObjects = new List<GameObject>();
-
-    // برای اینکه  بفهمیم آبجکت فعال هست یا نه
     private List<bool> activatedStates = new List<bool>();
 
-    void Start()
+    // --- تغییر مهم ۱: استفاده از Awake برای تنظیمات اولیه ---
+    void Awake()
     {
+        // اطمینان از اینکه بازی در لحظه شروع فریز نیست
+        Time.timeScale = 1f;
+
         if (tutorialUIContainer != null)
             tutorialUIContainer.SetActive(false);
         
+        nextButton.onClick.RemoveAllListeners(); // جلوگیری از انباشته شدن لیسنرها
+        skipButton.onClick.RemoveAllListeners();
+
         nextButton.onClick.AddListener(GoToNextStep);
         skipButton.onClick.AddListener(EndTutorial);
     }
 
+    void Start()
+    {
+        // --- تغییر مهم ۲: شروع با تاخیر برای حل مشکل موبایل ---
+        // این تاخیر اجازه می‌دهد تمام UI و اسکریپت‌های دیگر کامل لود شوند
+        Invoke(nameof(CheckAndStartTutorial), 0.5f);
+    }
+
+    private void CheckAndStartTutorial()
+    {
+        // اگر حالت تست است یا هنوز مرحله را ندیده
+        if (PlayerPrefs.GetInt(TutorialSaveKey, 0) == 0)
+        {
+            StartTutorial();
+        }
+    }
+
     public void StartTutorial()
     {
+        // فریز کردن بازی
         Time.timeScale = 0f;
 
         if (tutorialUIContainer != null)
             tutorialUIContainer.SetActive(true);
         
-        // --- بخش جدید: غیرفعال کردن جوی‌استیک ---
+        // غیرفعال کردن جوی‌استیک
         if (joystickObject != null)
         {
             joystickObject.SetActive(false);
@@ -98,57 +117,52 @@ public class TutorialManager : MonoBehaviour
 
     private void ShowStep(int stepIndex)
     {
+        // ۱. چک کن که آرایه اصلا وجود داره و خالی نیست؟
+        if (steps == null || steps.Length == 0) return;
+
+        // ۲. چک کن که ایندکس معتبره؟
         if (stepIndex < 0 || stepIndex >= steps.Length) return;
 
+        // ۳. حالا با خیال راحت بگیرش
         TutorialStep step = steps[stepIndex];
 
-        // ... (تنظیمات متن، فلش، دکمه‌ها مثل قبل) ...
         descriptionText.text = step.description;
         descriptionText.rectTransform.anchoredPosition = step.textPosition;
         pointerArrow.anchoredPosition = step.arrowPosition;
         pointerArrow.localEulerAngles = new Vector3(0, 0, step.arrowZRotation);
         buttonsGroup.anchoredPosition = step.buttonsPosition;
 
-        // --- <<< این بخش کامل جایگزین می‌شود >>> ---
+        Transform actualTarget = null;
 
-        Transform actualTarget = null; // متغیری برای نگه داشتن هدف واقعی
-
-        // ۱. آیا هدف این مرحله بازیکن است؟
+        // پیدا کردن تار겟 (بازیکن یا آبجکت مشخص شده)
         if (step.targetIsPlayer)
         {
-            // بله -> بازیکن رو با تگ "Player" پیدا کن
             GameObject playerObject = GameObject.FindGameObjectWithTag("Player");
             if (playerObject != null)
             {
                 actualTarget = playerObject.transform;
-                Debug.Log("Tutorial Step: Player found as target.");
             }
             else
             {
-                // اگر بازیکن پیدا نشد، ارور بده و هایلایت نکن
-                Debug.LogError("Tutorial Step Error: Target is set to Player, but no object with tag 'Player' found!");
-                pointerArrow.gameObject.SetActive(false); // فلش رو مخفی کن چون هدفی نیست
-                // می‌تونی اینجا EndTutorial() رو هم صدا بزنی یا مرحله رو رد کنی
-                return; // از ادامه تابع خارج شو
+                pointerArrow.gameObject.SetActive(false);
+                return;
             }
         }
         else
         {
-            // خیر -> از هدفی که در Inspector تنظیم شده استفاده کن
             actualTarget = step.target;
         }
 
-        // ۲. فعال کردن و هایلایت کردن آبجکت‌های نمایشی (مثل قبل)
+        // فعال‌سازی آبجکت‌های هایلایت
         if (step.objectsToActivateAndHighlight != null)
         {
-            // ... (کد فعال کردن objectsToActivateAndHighlight مثل قبل) ...
-            // (مطمئن شو که HighlightObject رو برای هر کدوم صدا می‌زنی)
              foreach (GameObject obj in step.objectsToActivateAndHighlight)
              {
                  if (obj != null)
                  {
                      if (!obj.activeSelf) activatedStates.Add(false);
                      else activatedStates.Add(true);
+
                      obj.SetActive(true);
                      currentlyActivatedObjects.Add(obj);
                      HighlightObject(obj.transform);
@@ -156,26 +170,24 @@ public class TutorialManager : MonoBehaviour
              }
         }
 
-        // ۳. هایلایت کردن هدف اصلی (بازیکن یا هدف Inspector)
+        // نمایش فلش و هایلایت تارگت اصلی
         bool hasMainTarget = actualTarget != null;
-        pointerArrow.gameObject.SetActive(hasMainTarget); // فلش فقط اگر هدف اصلی وجود دارد نمایش داده شود
+        pointerArrow.gameObject.SetActive(hasMainTarget);
 
         if (hasMainTarget)
         {
-            HighlightObject(actualTarget); // تابع هایلایت رو با هدف واقعی صدا بزن
+            HighlightObject(actualTarget);
         }
-        // --- <<< پایان بخش جایگزین شده >>> ---
     }
     
     private void HighlightObject(Transform objTransform)
     {
-        // بررسی می‌کند که آیا آبجکت یک المان UI است
         RectTransform uiTarget = objTransform as RectTransform;
         if (uiTarget != null && objTransform.GetComponent<CanvasRenderer>() != null)
         {
             HighlightUIElement(uiTarget);
         }
-        else // در غیر این صورت، یک آبجکت دنیای بازی است
+        else
         {
             HighlightWorldObject(objTransform);
         }
@@ -183,7 +195,7 @@ public class TutorialManager : MonoBehaviour
 
     private void HighlightUIElement(RectTransform uiTarget)
     {
-        if (currentUiTargets.Contains(uiTarget)) return; // جلوگیری از اضافه شدن تکراری
+        if (currentUiTargets.Contains(uiTarget)) return;
 
         currentUiTargets.Add(uiTarget);
         originalParents.Add(uiTarget.parent);
@@ -208,7 +220,7 @@ public class TutorialManager : MonoBehaviour
                 }
             }
         }
-        else if (worldTarget.GetComponent<MeshRenderer>() != null) // برای آبجکت‌های سه‌بعدی
+        else if (worldTarget.GetComponent<MeshRenderer>() != null)
         {
             current3DTarget = worldTarget.gameObject;
             originalLayer = current3DTarget.layer;
@@ -218,26 +230,25 @@ public class TutorialManager : MonoBehaviour
 
     private void RestoreTargetToNormal()
     {
-        // غیرفعال کردن آبجکت‌هایی که فعال کرده بودیم
+        // بازگردانی آبجکت‌های فعال شده
         if (currentlyActivatedObjects.Count > 0)
         {
-            foreach (GameObject obj in currentlyActivatedObjects)
+            for (int i = 0; i < currentlyActivatedObjects.Count; i++)
             {
-                // if (obj != null) obj.SetActive(false);
-
+                GameObject obj = currentlyActivatedObjects[i];
                 if (obj != null)
                 {
-                    int index = currentlyActivatedObjects.IndexOf(obj);
-                    if (index >= 0 && index < activatedStates.Count)
-                    {
-                        obj.SetActive(activatedStates[index]);
-                    }
+                    if (i < activatedStates.Count)
+                        obj.SetActive(activatedStates[i]);
+                    else
+                        obj.SetActive(false); // Fallback
                 }
             }
             currentlyActivatedObjects.Clear();
+            activatedStates.Clear(); // لیست وضعیت‌ها هم باید خالی شود
         }
         
-        // بازگردانی حالت اولیه UI
+        // بازگردانی UI
         if (currentUiTargets.Count > 0)
         {
             for(int i = 0; i < currentUiTargets.Count; i++)
@@ -253,7 +264,7 @@ public class TutorialManager : MonoBehaviour
             originalSiblingIndexes.Clear();
         }
         
-        // بازگردانی حالت اولیه اسپرایت‌ها
+        // بازگردانی اسپرایت‌ها
         if (currentRenderers.Count > 0)
         {
             for (int i = 0; i < currentRenderers.Count; i++)
@@ -265,7 +276,7 @@ public class TutorialManager : MonoBehaviour
             originalSortingLayerNames.Clear();
         }
         
-        // بازگردانی حالت اولیه آبجکت سه‌بعدی
+        // بازگردانی 3D
         if (current3DTarget != null)
         {
             current3DTarget.layer = originalLayer;
@@ -293,287 +304,24 @@ public class TutorialManager : MonoBehaviour
         if (tutorialUIContainer != null)
             tutorialUIContainer.SetActive(false);
 
-        // --- بخش جدید: فعال کردن دوباره جوی‌استیک ---
+        // فعال کردن دوباره جوی‌استیک
         if (joystickObject != null)
         {
             joystickObject.SetActive(true);
         }
 
+        // آزاد کردن بازی
         Time.timeScale = 1f;
+
+        // ذخیره کردن اینکه بازیکن مرحله را دیده
+        PlayerPrefs.SetInt(TutorialSaveKey, 1);
+        PlayerPrefs.Save();
+
+        // ذخیره کردن اینکه بازیکن مرحله را دیده (فقط اگر حالت تست خاموش باشد)
+        // if (!isTestMode)
+        // {
+        //     PlayerPrefs.SetInt(TutorialSaveKey, 1);
+        //     PlayerPrefs.Save();
+        // }
     }
 }
-
-
-
-
-
-
-
-// using UnityEngine;
-// using UnityEngine.UI;
-// using TMPro;
-// using System.Collections.Generic;
-// using RTLTMPro;
-
-// [System.Serializable]
-// public class TutorialStep
-// {
-//     public string stepName; // <<-- متغیر جدید برای عنوان در Inspector
-    
-//     [TextArea(3, 5)]
-//     public string description;
-//     public bool isWorldObject = false;
-
-//     [Tooltip("The target the arrow points to (can be UI or a world object)")]
-//     public Transform target;
-
-
-//     [Header("Custom Positions & Rotation")]
-//     public Vector2 textPosition;
-//     public Vector2 arrowPosition;
-//     public float arrowZRotation;
-//     public Vector2 buttonsPosition;
-
-//     [Header("Display Objects")]
-//     [Tooltip("Objects that are normally inactive and will be temporarily activated and highlighted during this step")]
-//     public GameObject[] objectsToActivateAndHighlight;
-// }
-
-// public class TutorialManager : MonoBehaviour
-// {
-//     [Header("Main Tutorial UI Container")]
-//     [Tooltip("The parent object that contains all visual tutorial elements and will be enabled/disabled")]
-
-//     public GameObject joystickObject; // <<-- متغیر جدید برای جوی‌استیک
-
-//     public GameObject tutorialUIContainer;
-
-//     [Header("Core Tutorial Components")]
-//     public RTLTextMeshPro descriptionText;
-//     public RectTransform pointerArrow;
-//     public RectTransform buttonsGroup;
-//     public Button nextButton;
-//     public Button skipButton;
-
-//     [Header("Tutorial Steps")]
-//     public TutorialStep[] steps;
-    
-//     private int currentStep = 0;
-    
-//     // متغیرهای بازگردانی حالت اولیه
-//     private List<RectTransform> currentUiTargets = new List<RectTransform>();
-//     private List<Transform> originalParents = new List<Transform>();
-//     private List<int> originalSiblingIndexes = new List<int>();
-    
-//     private List<SpriteRenderer> currentRenderers = new List<SpriteRenderer>();
-//     private List<string> originalSortingLayerNames = new List<string>();
-    
-//     private GameObject current3DTarget;
-//     private int originalLayer;
-    
-//     private List<GameObject> currentlyActivatedObjects = new List<GameObject>();
-
-//     // برای اینکه  بفهمیم آبجکت فعال هست یا نه
-//     private List<bool> activatedStates = new List<bool>();
-
-//     void Start()
-//     {
-//         if (tutorialUIContainer != null)
-//             tutorialUIContainer.SetActive(false);
-        
-//         nextButton.onClick.AddListener(GoToNextStep);
-//         skipButton.onClick.AddListener(EndTutorial);
-//     }
-
-//     public void StartTutorial()
-//     {
-//         if (tutorialUIContainer != null)
-//             tutorialUIContainer.SetActive(true);
-        
-//         // --- بخش جدید: غیرفعال کردن جوی‌استیک ---
-//         if (joystickObject != null)
-//         {
-//             joystickObject.SetActive(false);
-//         }
-
-//         currentStep = 0;
-//         ShowStep(currentStep);
-//     }
-
-//     private void ShowStep(int stepIndex)
-//     {
-//         if (stepIndex < 0 || stepIndex >= steps.Length) return;
-
-//         TutorialStep step = steps[stepIndex];
-
-//         // تنظیمات بصری UI آموزش
-//         descriptionText.text = step.description;
-//         descriptionText.rectTransform.anchoredPosition = step.textPosition;
-//         pointerArrow.anchoredPosition = step.arrowPosition;
-//         pointerArrow.localEulerAngles = new Vector3(0, 0, step.arrowZRotation);
-//         buttonsGroup.anchoredPosition = step.buttonsPosition;
-
-//         // --- منطق یکپارچه برای هایلایت کردن ---
-        
-//         bool hasAnyTarget = step.target != null || (step.objectsToActivateAndHighlight != null && step.objectsToActivateAndHighlight.Length > 0);
-//         pointerArrow.gameObject.SetActive(hasAnyTarget);
-        
-//         // ۱. فعال کردن و هایلایت کردن آبجکت‌های نمایشی
-//         if (step.objectsToActivateAndHighlight != null)
-//         {
-//             foreach (GameObject obj in step.objectsToActivateAndHighlight)
-//             {
-//                 if (obj != null)
-//                 {
-//                     if (obj.activeSelf == false)
-//                         activatedStates.Add(false);
-//                     else
-//                         activatedStates.Add(true);
-
-//                     obj.SetActive(true);
-//                     currentlyActivatedObjects.Add(obj);
-//                     HighlightObject(obj.transform); 
-//                 }
-//             }
-//         }
-
-//         // ۲. هایلایت کردن هدف اصلی
-//         if (step.target != null)
-//         {
-//             HighlightObject(step.target);
-//         }
-//     }
-    
-//     private void HighlightObject(Transform objTransform)
-//     {
-//         // بررسی می‌کند که آیا آبجکت یک المان UI است
-//         RectTransform uiTarget = objTransform as RectTransform;
-//         if (uiTarget != null && objTransform.GetComponent<CanvasRenderer>() != null)
-//         {
-//             HighlightUIElement(uiTarget);
-//         }
-//         else // در غیر این صورت، یک آبجکت دنیای بازی است
-//         {
-//             HighlightWorldObject(objTransform);
-//         }
-//     }
-
-//     private void HighlightUIElement(RectTransform uiTarget)
-//     {
-//         if (currentUiTargets.Contains(uiTarget)) return; // جلوگیری از اضافه شدن تکراری
-
-//         currentUiTargets.Add(uiTarget);
-//         originalParents.Add(uiTarget.parent);
-//         originalSiblingIndexes.Add(uiTarget.GetSiblingIndex());
-        
-//         uiTarget.SetParent(tutorialUIContainer.transform, true);
-//         uiTarget.SetAsLastSibling();
-//     }
-    
-//     private void HighlightWorldObject(Transform worldTarget)
-//     {
-//         SpriteRenderer[] renderers = worldTarget.GetComponentsInChildren<SpriteRenderer>();
-//         if (renderers.Length > 0)
-//         {
-//             foreach (SpriteRenderer renderer in renderers)
-//             {
-//                 if (!currentRenderers.Contains(renderer))
-//                 {
-//                     originalSortingLayerNames.Add(renderer.sortingLayerName);
-//                     currentRenderers.Add(renderer);
-//                     renderer.sortingLayerName = "Highlighted";
-//                 }
-//             }
-//         }
-//         else if (worldTarget.GetComponent<MeshRenderer>() != null) // برای آبجکت‌های سه‌بعدی
-//         {
-//             current3DTarget = worldTarget.gameObject;
-//             originalLayer = current3DTarget.layer;
-//             current3DTarget.layer = LayerMask.NameToLayer("Highlighted");
-//         }
-//     }
-
-//     private void RestoreTargetToNormal()
-//     {
-//         // غیرفعال کردن آبجکت‌هایی که فعال کرده بودیم
-//         if (currentlyActivatedObjects.Count > 0)
-//         {
-//             foreach (GameObject obj in currentlyActivatedObjects)
-//             {
-//                 // if (obj != null) obj.SetActive(false);
-
-//                 if (obj != null)
-//                 {
-//                     int index = currentlyActivatedObjects.IndexOf(obj);
-//                     if (index >= 0 && index < activatedStates.Count)
-//                     {
-//                         obj.SetActive(activatedStates[index]);
-//                     }
-//                 }
-//             }
-//             currentlyActivatedObjects.Clear();
-//         }
-        
-//         // بازگردانی حالت اولیه UI
-//         if (currentUiTargets.Count > 0)
-//         {
-//             for(int i = 0; i < currentUiTargets.Count; i++)
-//             {
-//                 if (currentUiTargets[i] != null && originalParents[i] != null)
-//                 {
-//                     currentUiTargets[i].SetParent(originalParents[i], true);
-//                     currentUiTargets[i].SetSiblingIndex(originalSiblingIndexes[i]);
-//                 }
-//             }
-//             currentUiTargets.Clear();
-//             originalParents.Clear();
-//             originalSiblingIndexes.Clear();
-//         }
-        
-//         // بازگردانی حالت اولیه اسپرایت‌ها
-//         if (currentRenderers.Count > 0)
-//         {
-//             for (int i = 0; i < currentRenderers.Count; i++)
-//             {
-//                 if(currentRenderers[i] != null) 
-//                     currentRenderers[i].sortingLayerName = originalSortingLayerNames[i];
-//             }
-//             currentRenderers.Clear();
-//             originalSortingLayerNames.Clear();
-//         }
-        
-//         // بازگردانی حالت اولیه آبجکت سه‌بعدی
-//         if (current3DTarget != null)
-//         {
-//             current3DTarget.layer = originalLayer;
-//             current3DTarget = null;
-//         }
-//     }
-
-//     private void GoToNextStep()
-//     {
-//         RestoreTargetToNormal();
-//         currentStep++;
-//         if (currentStep < steps.Length)
-//         {
-//             ShowStep(currentStep);
-//         }
-//         else
-//         {
-//             EndTutorial();
-//         }
-//     }
-
-//     private void EndTutorial()
-//     {
-//         RestoreTargetToNormal();
-//         if (tutorialUIContainer != null)
-//             tutorialUIContainer.SetActive(false);
-
-//         // --- بخش جدید: فعال کردن دوباره جوی‌استیک ---
-//         if (joystickObject != null)
-//         {
-//             joystickObject.SetActive(true);
-//         }
-//     }
-// }

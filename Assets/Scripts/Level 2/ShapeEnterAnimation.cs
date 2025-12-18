@@ -2,8 +2,8 @@ using UnityEngine;
 
 public class ShapeEnterAnimation : MonoBehaviour
 {
-    public float delay = 1f;
-    public float moveTime = 1f;
+    public float delay = 0.5f;
+    public float moveTime = 0.5f;
     public Vector3 targetPosition;
 
     void Start()

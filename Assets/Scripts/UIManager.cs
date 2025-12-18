@@ -62,16 +62,16 @@ public class UIManager : MonoBehaviour
     {
         Debug.LogWarning(PlayerPrefsKey + " value: " + PlayerPrefs.GetInt(PlayerPrefsKey, 0));
         MenuMusic.StopMusic();
-        if (PlayerPrefs.GetInt(PlayerPrefsKey, 0) == 0)
-        {
-            tutorialPanel.SetActive(true);
-            PauseGame();
-        }
-        else
-        {
-            ResumeGame();
-            tutorialPanel.SetActive(false);
-        }
+        // if (PlayerPrefs.GetInt(PlayerPrefsKey, 0) == 0)
+        // {
+        //     tutorialPanel.SetActive(true);
+        //     PauseGame();
+        // }
+        // else
+        // {
+        //     ResumeGame();
+        //     tutorialPanel.SetActive(false);
+        // }
 
         music = FindFirstObjectByType<BackgroundMusic>();
     }
@@ -242,10 +242,28 @@ public class UIManager : MonoBehaviour
     }
 
     public TutorialManager tutorialManager;
+    // public void ShowTutorial()
+    // {
+    //     // PauseGame();
+    //     tutorialManager.gameObject.SetActive(true);
+    // }
+    // <<< تغییر: تابع نمایش توتوریال (مثلاً از دکمه راهنما در تنظیمات) >>>
+
     public void ShowTutorial()
     {
-        // PauseGame();
-        tutorialManager.gameObject.SetActive(true);
+        // بستن پنل تنظیمات اگر باز است
+        if (settingsPanel != null && settingsPanel.activeSelf) 
+            settingsPanel.SetActive(false);
+            
+        // استفاده از متغیری که در اینسپکتور پر می‌کنی (بدون نیاز به instance)
+        if (tutorialManager != null)
+        {
+            tutorialManager.gameObject.SetActive(true);
+        }
+        else
+        {
+            Debug.LogError("TutorialManager Script is NOT assigned in UIManager Inspector!");
+        }
     }
 
     public void CloseTutorial()
