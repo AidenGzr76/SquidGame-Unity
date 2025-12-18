@@ -1,3 +1,4 @@
+// using System.Diagnostics;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
@@ -59,6 +60,7 @@ public class UIManager : MonoBehaviour
     
     void Start()
     {
+        Debug.LogWarning(PlayerPrefsKey + " value: " + PlayerPrefs.GetInt(PlayerPrefsKey, 0));
         MenuMusic.StopMusic();
         if (PlayerPrefs.GetInt(PlayerPrefsKey, 0) == 0)
         {
